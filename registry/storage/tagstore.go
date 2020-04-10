@@ -33,7 +33,7 @@ func (ts *tagStore) Tags(ctx context.Context, tags []string, last string) (n int
 		return 0, err
 	}
 
-	return paginateEndpoint(ctx, tags, root, "tags", last, ts.blobStore.driver.Walk)
+	return paginateEndpoint(ctx, tags, root, "", last, ts.blobStore.driver.Walk)
 }
 
 // All returns all tags

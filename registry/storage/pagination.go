@@ -3,9 +3,9 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"path"
+	"strings"
 
 	"github.com/docker/distribution/registry/storage/driver"
 )
@@ -13,7 +13,7 @@ import (
 var errPaginateStop = errors.New("we have reached last, skip the rest")
 
 // Returns a list, or partial list, of the desired results from drverWalkFn.
-func paginateEndpoint(ctx context.Context, results []string, root, resultsKey, last string, drverWalkFn func(ctx context.Context, path string, f driver.WalkFn) error) (n int, err error) {
+func paginateEndpoint(ctx context.Context, results []string, root, subFolder, last string, drverWalkFn func(ctx context.Context, path string, f driver.WalkFn) error) (n int, err error) {
 	var moreResults bool
 	var foundResults []string
 
@@ -22,7 +22,7 @@ func paginateEndpoint(ctx context.Context, results []string, root, resultsKey, l
 	}
 
 	err = drverWalkFn(ctx, root, func(fileInfo driver.FileInfo) error {
-		err := handlePaginateWalk(fileInfo, root, resultsKey, last, func(resultPath string) error {
+		err := handlePaginateWalk(fileInfo, root, subFolder, last, func(resultPath string) error {
 			// if we have already filed up the `foundResults`, then
 			// this means that there are more results
 			if len(foundResults) == len(results) {
@@ -59,18 +59,27 @@ func paginateEndpoint(ctx context.Context, results []string, root, resultsKey, l
 // has a path of a repository under root and that it is lexographically
 // after last. Otherwise, it will return ErrSkipDir. This should be used
 // with Walk to do handling with repositories in a storage.
-func handlePaginateWalk(fileInfo driver.FileInfo, root, resultsKey, last string, fn func(repoPath string) error) error {
+func handlePaginateWalk(fileInfo driver.FileInfo, root, subFolder, last string, fn func(repoPath string) error) error {
 	rootFilePath := fileInfo.Path()
-	fmt.Println(rootFilePath)
 
 	// lop the base path off
 	filePath := rootFilePath[len(root)+1:]
 
 	_, file := path.Split(filePath)
-	if last < file {
-		if err := fn(file); err != nil {
-			return err
+	if file == subFolder || subFolder == "" {
+		if subFolder != "" {
+			file = strings.TrimSuffix(filePath, "/"+subFolder)
 		}
+
+		if last < file {
+			if err := fn(file); err != nil {
+				return err
+			}
+		}
+		return driver.ErrSkipDir
+	} else if strings.HasPrefix(file, "_") {
+		return driver.ErrSkipDir
 	}
-	return driver.ErrSkipDir
+
+	return nil
 }
