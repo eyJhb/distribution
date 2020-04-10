@@ -15,6 +15,10 @@ type proxyTagService struct {
 
 var _ distribution.TagService = proxyTagService{}
 
+func (pt proxyTagService) Tags(ctx context.Context, tags []string, last string) (n int, err error) {
+	return 0, nil
+}
+
 // Get attempts to get the most recent digest for the tag by checking the remote
 // tag service first and then caching it locally.  If the remote is unavailable
 // the local association is returned

@@ -3,7 +3,7 @@ package distribution
 import (
 	"context"
 
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 // TagService provides access to information about tagged objects.
@@ -23,6 +23,10 @@ type TagService interface {
 
 	// All returns the set of tags managed by this tag service
 	All(ctx context.Context) ([]string, error)
+
+	// Return a slice of tags, from last with max tags returned `len(tags)` managed by this tag service
+	//Tags(ctx context.Context, tags []string, last string) (n int, err error)
+	Tags(ctx context.Context, tags []string, last string) (n int, err error)
 
 	// Lookup returns the set of tags referencing the given digest.
 	Lookup(ctx context.Context, digest Descriptor) ([]string, error)

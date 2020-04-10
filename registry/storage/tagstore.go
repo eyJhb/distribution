@@ -3,10 +3,11 @@ package storage
 import (
 	"context"
 	"path"
+	"sort"
 
 	"github.com/docker/distribution"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 var _ distribution.TagService = &tagStore{}
@@ -19,6 +20,20 @@ var _ distribution.TagService = &tagStore{}
 type tagStore struct {
 	repository *repository
 	blobStore  *blobStore
+}
+
+// Returns a list, or partial list, of repositories in the registry.
+// Because it's a quite expensive operation, it should only be used when building up
+// an initial set of repositories.
+func (ts *tagStore) Tags(ctx context.Context, tags []string, last string) (n int, err error) {
+	root, err := pathFor(manifestTagPathSpec{
+		name: ts.repository.Named().Name(),
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return paginateEndpoint(ctx, tags, root, "tags", last, ts.blobStore.driver.Walk)
 }
 
 // All returns all tags
@@ -46,6 +61,9 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		_, filename := path.Split(entry)
 		tags = append(tags, filename)
 	}
+
+	// sort the tags before return
+	sort.Strings(tags)
 
 	return tags, nil
 }

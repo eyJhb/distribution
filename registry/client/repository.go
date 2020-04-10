@@ -20,7 +20,7 @@ import (
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/cache/memory"
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 // Registry provides an interface for calling Repositories, which returns a catalog of repositories.
@@ -197,6 +197,10 @@ type tags struct {
 	client *http.Client
 	ub     *v2.URLBuilder
 	name   reference.Named
+}
+
+func (t *tags) Tags(ctx context.Context, tags []string, last string) (n int, err error) {
+	return 0, nil
 }
 
 // All returns all tags

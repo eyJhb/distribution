@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/registry/api/errcode"
-	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
 )
 
@@ -33,30 +30,19 @@ type tagsAPIResponse struct {
 
 // GetTags returns a json list of tags for a specific image name.
 func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-
 	tagService := th.Repository.Tags(th)
-	tags, err := tagService.All(th)
-	if err != nil {
-		switch err := err.(type) {
-		case distribution.ErrRepositoryUnknown:
-			th.Errors = append(th.Errors, v2.ErrorCodeNameUnknown.WithDetail(map[string]string{"name": th.Repository.Named().Name()}))
-		case errcode.Error:
-			th.Errors = append(th.Errors, err)
-		default:
-			th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		}
-		return
+
+	ps := paginateStruct{
+		errs:      &th.Errors,
+		entriesFn: tagService.Tags,
+		encFn: func(enc *json.Encoder, n int, tags []string) error {
+			return enc.Encode(tagsAPIResponse{
+				Name: th.Repository.Named().Name(),
+				Tags: tags[0:n],
+			})
+		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(tagsAPIResponse{
-		Name: th.Repository.Named().Name(),
-		Tags: tags,
-	}); err != nil {
-		th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		return
-	}
+	paginateEndpoint(th.Context, ps, w, r)
+	return
 }
